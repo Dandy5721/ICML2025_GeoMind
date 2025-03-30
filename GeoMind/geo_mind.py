@@ -219,63 +219,6 @@ def Translation_time(A, B, n, batch_size):
     return Tresult
 
 
-def Chol_de(A, n):
-    '''
-    input matrix A and it's size n
-    decomponent by Cholesky
-    return a vector with size n*(n+1)/2
-    '''
-    # A = tf.add (A , 1e-10 * tf.diag(tf.random_uniform([n])) )
-    # A = tf.cond(
-    #     tf.greater( tf.matrix_determinant(A),tf.constant(0.0) ) ,
-    #     lambda: A,
-    #     lambda: tf.add (A , 1e-10 * tf.eye(n) ) )
-    # L = tf.cholesky(A)
-
-    L = A
-    result = L[:, :1, :1]
-    for i in range(1, n):
-        j = i
-        result = torch.cat([result, L[:, i : i + 1, : j + 1]], axis=2)
-
-    result = torch.reshape(result, [-1, n * (n + 1) // 2])
-    return result
-
-
-def Chol_com(l, n, batch_size):
-    '''
-    input vector l and target shape n and eps to be the smallest value
-    return lower trangle matrix
-    '''
-    lower_triangle_ = torch.unsqueeze(
-        torch.cat([l[:, :1], torch.zeros((batch_size, n - 1))], axis=1),
-        1,
-    )
-    for i in range(1, n):
-        lower_triangle_ = torch.cat(
-            [
-                lower_triangle_,
-                torch.unsqueeze(
-                    torch.cat(
-                        [
-                            l[:, i * (i + 1) // 2 : i * (i + 1) // 2 + i + 1],
-                            torch.zeros((batch_size, n - i - 1)),
-                        ],
-                        axis=1,
-                    ),
-                    1,
-                ),
-            ],
-            axis=1,
-        )
-
-    lower_triangle_ = torch.add(
-        lower_triangle_,
-        torch.unsqueeze(torch.eye(n) * 1e-2, axis=0).repeat([batch_size, 1, 1]),
-    )
-    result = torch.matmul(lower_triangle_, lower_triangle_.transpose())
-    return result
-
 class GeoMind(nn.Module):
 
 # Will release after acceptance.
