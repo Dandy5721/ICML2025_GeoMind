@@ -104,13 +104,13 @@ def MatrixExp(B, l, n):
     output the somehow exp(B) = I + B + B^2 / 2! + B^3 / 3! + ... + B^l / l!
     '''
 
-    Result = torch.eye(n, device=B.device)
-    B = (B + B.T)/2 
-    B = add_small_diagonal(B)
-    matrix_to_invert = torch.subtract(Result, B)
-    # Result = torch.eye(n, device=B.device).unsqueeze(0).repeat(B.shape[0], 1, 1)
-    return torch.matmul(torch.inverse(matrix_to_invert), torch.add(Result, B))
-    # return torch.matmul(torch.inverse(torch.subtract(Result, B)), torch.add(Result, B))
+    #Result = torch.eye(n, device=B.device)
+    #B = (B + B.T)/2 
+    #B = add_small_diagonal(B)
+    #matrix_to_invert = torch.subtract(Result, B)
+    Result = torch.eye(n, device=B.device).unsqueeze(0).repeat(B.shape[0], 1, 1)
+    # return torch.matmul(torch.inverse(matrix_to_invert), torch.add(Result, B))
+    return torch.matmul(torch.inverse(torch.subtract(Result, B)), torch.add(Result, B))
     # return torch.matmul(torch.linalg.inv(Result - B), Result + B)
 
 def Translation(A: Tensor, B: Tensor, n: int, batch_size: int) -> Tensor:
@@ -161,41 +161,63 @@ def Translation(A: Tensor, B: Tensor, n: int, batch_size: int) -> Tensor:
     return Tresult
 
 
-def Translation(A, B, n, batch_size):
+def Translation_time(A, B, n, batch_size):
+    """
+    Perform a batched similarity transformation of the input matrix A using a skew-symmetric
+    matrix derived from vector B. The transformation is of the form:
 
-    '''
-    input the matrix A and vector B
-    change B to be SO
-    like [[0 ,  1, 2]
-          [-1,  0, 3]
-          [-2, -3, 0]]
-    return B * A * B.T
-    '''
-    power_matrix = 5
-    B = torch.reshape(B, [1, -1])
-    
-    # lower_triangel = fill_triangular(B)
+        T_result = B_matrix @ A @ B_matrix.T
+
+    where B_matrix ∈ SO(n), i.e., a rotation matrix constructed by exponentiating a skew-symmetric
+    matrix built from B.
+
+    Args:
+        A (Tensor): A 4D tensor of shape [T, B, n, n], typically representing a batch of dynamic
+                    functional connectivity matrices over time and samples.
+        B (Tensor): A 1D vector used to construct a skew-symmetric matrix. It is reshaped and processed
+                    into a rotation matrix via matrix exponential.
+        n (int):    The spatial dimension of the square matrices in A.
+        batch_size (int): Number of samples in the batch. Used to repeat the B_matrix accordingly.
+
+    Returns:
+        Tensor: A 4D tensor of the same shape as A, where each matrix has been transformed by the
+                same SO(n) rotation matrix: B_matrix @ A @ B_matrix.T
+
+    Notes:
+        - The input vector B is reshaped and used to construct a lower triangular matrix.
+        - This lower triangular matrix is made skew-symmetric, then exponentiated to obtain an SO(n) matrix.
+        - The same rotation is applied across all time steps and samples in the batch.
+    """
+
+    power_matrix = 5  # Degree of Taylor approximation for matrix exponential
+    B = torch.reshape(B, [1, -1])  # Make B a row vector
+
+    # Construct a lower triangular matrix from B
     line_B = [torch.zeros([1, n], device=A.device)]
     for i in range(n - 1):
         temp_line = torch.cat(
-            [B[:1, i : 2 * i + 1], torch.zeros([1, n - i - 1], device=A.device)], axis=1
+            [B[:1, i: 2 * i + 1], torch.zeros([1, n - i - 1], device=A.device)],
+            dim=1
         )
         line_B.append(temp_line)
+    lower_triangle = torch.cat(line_B, dim=0)
 
-    lower_triangel = torch.cat(line_B, axis=0)
+    # Make it skew-symmetric: B_matrix = L - L^T
+    B_matrix = torch.subtract(lower_triangle, lower_triangle.T)
 
-    B_matrix = torch.subtract(lower_triangel, lower_triangel.T)
-    # print("B1_matrix",B_matrix.shape)
-    B_matrix = (B_matrix + B_matrix.T) / 2
-    B_matrix = add_small_diagonal(B_matrix)
-    B_matrix = MatrixExp(B_matrix, power_matrix, n)
-    B_matrix = torch.unsqueeze(B_matrix, 0).repeat([batch_size, 1, 1])
-    # print("B_matrix",B_matrix.shape)
-    # print("A_matrix",A.shape)
-    Tresult = torch.matmul(B_matrix, A)  # B * A
+    # Convert skew-symmetric matrix to rotation matrix via exponential map
+    B_matrix = MatrixExp(B_matrix, power_matrix, n)  # Assumed external function
 
-    Tresult = torch.matmul(Tresult, B_matrix.permute([0, 2, 1]))  # B * A * B.T
+    # Reshape and repeat B_matrix across batch
+    B_matrix = B_matrix.unsqueeze(0).unsqueeze(0)  # Shape: [1, 1, n, n]
+    B_matrix = B_matrix.repeat(batch_size, 1, 1, 1)  # Shape: [B, 1, n, n]
+
+    # Apply similarity transformation: B A B^T
+    A = torch.einsum('tbmn,b1mn->tbmn', A, B_matrix)
+    Tresult = torch.einsum('tbmn,b1nm->tbmn', A, B_matrix.permute(0, 1, 3, 2))
+
     return Tresult
+
 
 def Chol_de(A, n):
     '''
