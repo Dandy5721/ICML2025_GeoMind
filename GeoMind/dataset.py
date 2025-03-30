@@ -59,10 +59,6 @@ def sorted_aphanumeric(data):
     alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
     return sorted(data, key=alphanum_key)  
 
-import numpy as np
-import scipy.io as sio
-import torch
-from torch.utils.data import Dataset
 
 class Dataset_Skeleton_seqFC(Dataset):
     def __init__(self, mat_file, window_size):
@@ -785,48 +781,4 @@ class Dataset_ADNI_seq(Dataset):
         return output_dict
     
 
-class Dataset_HCPA_seq(Dataset):
-    def __init__(self, data_dir):
-        super(Dataset_HCPA_seq, self).__init__()
-        self.data_dir = data_dir
-        self.data = []
-        self.labels = []
-        self.load_data()
-        self.pad_sentences()
-
-    def load_data(self):
-        sentence_sizes = []
-
-        for filename in os.listdir(self.data_dir):
-            label = filename.split('_')[3]
-
-            if label in ['REST']:
-                self.labels.append(0)
-            elif label in ['CARIT']:
-                self.labels.append(1)
-            elif label in ['FACENAME']:
-                self.labels.append(2)
-            elif label in ['VISMOTOR']:
-                self.labels.append(3)
-            else:
-                print('Label Error')
-                self.labels.append(-1)
-
-            datafile = os.path.join(self.data_dir, filename)
-            data = pd.read_csv(datafile, header=0).values
-            sentence_sizes.append(data.shape[0]) 
-            self.data.append(data[:, 1:])
-        self.max_sentence_size = max(sentence_sizes)
-
-    def pad_sentences(self):
-        self.data = [torch.cat((torch.tensor(sentence), torch.zeros(self.max_sentence_size - sentence.shape[0], sentence.shape[1])), dim=0) for sentence in self.data] 
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        data = torch.tensor(self.data[idx]).float()
-        label = torch.tensor(self.labels[idx]).long()
-        output_dict = {'labels': label, 'input_ids': data.float()}
-        return output_dict
     
