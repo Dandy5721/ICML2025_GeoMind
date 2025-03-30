@@ -74,6 +74,35 @@ def frechet_mean_logdet(X_list: list, weights, num_iterations: int = 50, lr: flo
     F_opt = L.detach() @ L.detach().t() + eps * torch.eye(N, dtype=torch.float32)
     return F_opt
 
+def log_euclidean_mean(X_list, weights=None):
+    """
+    Compute the (weighted) Log-Euclidean mean of a list of SPD matrices.
+    
+    Args:
+        X_list (list of Tensors): List of SPD matrices, each of shape (N, N).
+        weights (Tensor or list): Optional, weights that sum to 1. If None, use uniform weights.
+        
+    Returns:
+        Tensor: Log-Euclidean mean SPD matrix (N x N).
+    """
+    X_tensor = torch.stack(X_list)  # Shape: (M, N, N)
+    M, N, _ = X_tensor.shape
+
+    if weights is None:
+        weights = torch.ones(M, dtype=torch.float32) / M
+    else:
+        weights = torch.tensor(weights, dtype=torch.float32)
+
+    # Matrix logarithms
+    X_log = torch.linalg.logm(X_tensor)  # Shape: (M, N, N)
+
+    # Weighted sum in the log-domain
+    X_log_mean = torch.einsum("i,ijk->jk", weights, X_log)
+
+    # Exponential map to return to SPD space
+    X_lem = torch.linalg.expm(X_log_mean)
+
+    return X_lem
 
 def FM(A: Tensor, B: Tensor, a: float, n: int) -> Tensor:
     """
