@@ -42,7 +42,7 @@ def main():
     seq_models = ['CNN', 'RNN', 'LSTM', 'MIXER', 'TF', 'MLP'] # MLP is the spatial model indeed, but uses the same train func as sequential models
     spa_models = ['GCN', 'GIN', 'MGNN']
 
-    task_datasets = ['TASK', 'WM']
+    task_datasets = ['WM']
     disease_datasets = ['ADNI', 'OASIS', 'PPMI', 'ABIDE']
 
     if args.dataset in disease_datasets:
