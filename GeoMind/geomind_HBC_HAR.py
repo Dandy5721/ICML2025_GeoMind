@@ -5,6 +5,7 @@ from sklearn.model_selection import KFold
 from sklearn.metrics import precision_score, recall_score, f1_score
 from torch.utils.data import ConcatDataset, DataLoader, Subset
 import torch.nn as nn
+from optimizer import StiefelMetaOptimizer
 import numpy as np
 from tqdm import tqdm
 import os
