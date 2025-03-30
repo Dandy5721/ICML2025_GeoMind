@@ -168,7 +168,7 @@ def Translation_time(A, B, n, batch_size):
 
         T_result = B_matrix @ A @ B_matrix.T
 
-    where B_matrix ∈ SO(n), i.e., a rotation matrix constructed by exponentiating a skew-symmetric
+    where B_matrix ∈ O(n), i.e., a rotation matrix constructed by exponentiating a skew-symmetric
     matrix built from B.
 
     Args:
@@ -181,11 +181,11 @@ def Translation_time(A, B, n, batch_size):
 
     Returns:
         Tensor: A 4D tensor of the same shape as A, where each matrix has been transformed by the
-                same SO(n) rotation matrix: B_matrix @ A @ B_matrix.T
+                same O(n) rotation matrix: B_matrix @ A @ B_matrix.T
 
     Notes:
         - The input vector B is reshaped and used to construct a lower triangular matrix.
-        - This lower triangular matrix is made skew-symmetric, then exponentiated to obtain an SO(n) matrix.
+        - This lower triangular matrix is made skew-symmetric, then exponentiated to obtain an O(n) matrix.
         - The same rotation is applied across all time steps and samples in the batch.
     """
 
