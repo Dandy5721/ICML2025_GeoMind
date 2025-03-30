@@ -1,29 +1,21 @@
 from torch.optim.optimizer import Optimizer
 import torch
-from .utils import *
 from . import StiefelParameter, SPDParameter
+       
+def orthogonal_projection(A, B):
+    out = A - B @ A.transpose(-2, -1) @ B
+    return out
 
-class MyOptimizer(object):
-    def __init__(self, optimizer):
-        self.optimizer = optimizer
-        self.state = {}
 
-    def zero_grad(self):
-        return self.optimizer.zero_grad()
-
-    def state_dict(self):
-        return self.optimizer.state_dict()
-
-    @torch.no_grad()
-    def step(self, closure=None):
-        for group in self.optimizer.param_groups:
-            for p in group['params']:
-                if p.grad is None:
-                    continue
-                p.grad[torch.isnan(p.grad)] = 0.0
-
-        loss = self.optimizer.step(closure)
-        return loss
+def retraction(A, ref=None):
+    if ref is None:
+        data = A
+    else:
+        data = A + ref
+    Q, R = data.qr()
+    sign = (R.diagonal(dim1=-2, dim2=-1).sign() + 0.5).sign().diag_embed()
+    out = Q @ sign
+    return out
 
 def exp(X):
     S, U = torch.linalg.eigh(X)
@@ -75,4 +67,27 @@ class StiefelMetaOptimizer(object):
                     trans = expm(self.state[p], p)
                     p.fill_(0).add_(trans)
 
+        return loss
+
+
+class MyOptimizer(object):
+    def __init__(self, optimizer):
+        self.optimizer = optimizer
+        self.state = {}
+
+    def zero_grad(self):
+        return self.optimizer.zero_grad()
+
+    def state_dict(self):
+        return self.optimizer.state_dict()
+
+    @torch.no_grad()
+    def step(self, closure=None):
+        for group in self.optimizer.param_groups:
+            for p in group['params']:
+                if p.grad is None:
+                    continue
+                p.grad[torch.isnan(p.grad)] = 0.0
+
+        loss = self.optimizer.step(closure)
         return loss
