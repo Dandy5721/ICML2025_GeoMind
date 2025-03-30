@@ -78,6 +78,7 @@ d_state = args.state
 d_conv = 5
 expand = 1
 
+
 class ClassificationHead(nn.Module):
     def __init__(self, d_model, num_classes):
         super(ClassificationHead, self).__init__()
@@ -90,6 +91,32 @@ class ClassificationHead(nn.Module):
         x = self.relu(x)
         x = self.fc2(x)
         return x
+class DualOptimizerWrapper:
+    def __init__(self, backbone, classification_head, lr=5e-4):
+        # Optimizer for backbone with Stiefel manifold constraint
+        opt_backbone = torch.optim.Adam(backbone.parameters(), lr=lr)
+        self.optimizer_backbone = StiefelMetaOptimizer(opt_backbone)
+
+        # Optimizer for classification head (standard)
+        self.optimizer_head = torch.optim.Adam(classification_head.parameters(), lr=lr)
+
+    def zero_grad(self):
+        self.optimizer_backbone.zero_grad()
+        self.optimizer_head.zero_grad()
+
+    def step(self):
+        self.optimizer_backbone.step()
+        self.optimizer_head.step()
+
+    def state_dict(self):
+        return {
+            'backbone': self.optimizer_backbone.state_dict(),
+            'head': self.optimizer_head.state_dict()
+        }
+
+    def load_state_dict(self, state_dict):
+        self.optimizer_backbone.load_state_dict(state_dict['backbone'])
+        self.optimizer_head.load_state_dict(state_dict['head'])
 
 kf = KFold(n_splits=10, shuffle=False, random_state=None)
 
@@ -120,7 +147,7 @@ for i, (train_index, test_index) in enumerate(kf.split(dataset)):
     classification_head = ClassificationHead(dim, num_classes=args.state).to(args.gpu)
 
     # Define optimizer and loss function
-    optimizer = torch.optim.Adam(list(model.parameters()) + list(classification_head.parameters()), lr=5e-4)
+    optimizer = DualOptimizerWrapper(model, classification_head, lr=5e-4)
     criterion = torch.nn.CrossEntropyLoss()
 
     # Training loop
