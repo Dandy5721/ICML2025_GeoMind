@@ -96,7 +96,7 @@ def test_spa(model, dataset, device):
 def run_seq(model, train, val, test, device, total_epoch):
     model = model
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.00005)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.0005)
     best_val_acc = 0
     for epoch in range(1, 1+total_epoch):
         loss = train_seq(model, train, optimizer, criterion, device)
@@ -108,7 +108,7 @@ def run_seq(model, train, val, test, device, total_epoch):
         
 def run_spa(model, train, val, test, device, total_epoch):
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.00005)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.0005)
     best_val_acc = 0
     for epoch in range(1, 1+total_epoch):
         loss = train_seq(model, train, optimizer, criterion, device)
@@ -134,7 +134,7 @@ def kFold_seq(model1, splits, dataset, device, total_epoch):
 >>>>>>> 52cd94670142a524ae166ca548b5c66f07ac4500
         model = copy.deepcopy(model1).to(device)
         criterion = nn.CrossEntropyLoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.00005)
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=0.0005)
 
         best_acc = 0
         best_pre = 0
@@ -176,7 +176,7 @@ def kFold_spa(model1, splits, dataset, device, total_epoch):
 >>>>>>> 52cd94670142a524ae166ca548b5c66f07ac4500
         model = copy.deepcopy(model1).to(device)
         criterion = torch.nn.CrossEntropyLoss()
-        optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=5e-5)
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.0001, weight_decay=5e-4)
         
         best_test_acc = 0
         best_pre = 0
